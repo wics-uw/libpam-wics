@@ -1,0 +1,12 @@
+Source: libpam-csc
+Section: net
+Priority: optional
+Maintainer: David Bartley <dtbartle@csclub.uwaterloo.ca>
+Build-Depends: debhelper (>= 4.0.0), libldap-dev, libpam0g-dev
+Standards-Version: 3.7.2
+
+Package: libpam-csc
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Custom CSC PAM module to handle account expiration.
+ Custom CSC PAM module to handle account expiration.

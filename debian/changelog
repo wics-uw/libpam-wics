@@ -1,0 +1,5 @@
+libpam-csc (1.0) unstable; urgency=low
+
+  * Initial Release.
+
+ -- David Bartley <dtbartle@csclub.uwaterloo.ca>  Sun, 24 Jun 2007 23:18:22 -0400
