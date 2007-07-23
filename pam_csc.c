@@ -12,8 +12,6 @@
 #include <syslog.h>
 #include <pwd.h>
 
-#define PAM_CSC_LDAP_URI \
-    "ldap://caffeine.csclub.uwaterloo.ca ldap://perpugilliam.csclub.uwaterloo.ca"
 #define PAM_CSC_LDAP_USER_BASE_DN       "ou=People,dc=csclub,dc=uwaterloo,dc=ca"
 #define PAM_CSC_LDAP_GROUP_BASE_DN      "ou=Group,dc=csclub,dc=uwaterloo,dc=ca"
 #define PAM_CSC_LDAP_TIMEOUT            5
@@ -105,7 +103,7 @@ int check_user(const char* username, enum check_user_type_t checkType)
     }
 
     /* connect and bind */
-    WARN_LDAP( ldap_initialize(&ld, PAM_CSC_LDAP_URI) )
+    WARN_LDAP( ldap_create(&ld) )
     WARN_NEG1( ldap_simple_bind(ld, NULL, NULL) )
 
     WARN_ZERO( usernameEscaped = escape_ldap_string(username) );
