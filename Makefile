@@ -1,12 +1,11 @@
 CC=gcc
-CFLAGS=-O2 -fPIC -Wall
-LDFLAGS=-shared -lpam -lldap
-LD=ld
+CFLAGS=-g -O2 -fPIC -Wall
+LDFLAGS=-g -shared -lpam -lldap
 
 all: pam_csc.so
 
 pam_csc.so: pam_csc.o
-	$(LD) -o $@ $(LDFLAGS) $<
+	$(CC) -o $@ $(LDFLAGS) $<
 
 clean:
 	rm -f pam_csc.so pam_csc.o

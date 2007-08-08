@@ -1,3 +1,13 @@
+libpam-csc (1.2) stable testing; urgency=low
+
+  * Optimized querying by using single query and using asynch functions
+  * Added preliminary code for detecting CS accounts
+  * Refactored variable names to use underscores instead of camel-case
+  * Prefixed helper functions with pam_csc_
+  * Added -g to compiler flags
+
+ -- David Bartley <dtbartle@csclub.uwaterloo.ca>  Fri, 27 Jul 2007 13:17:35 -0400
+
 libpam-csc (1.1) unstable; urgency=low
 
   * Removed hardcoding of URI.

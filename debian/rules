@@ -33,9 +33,7 @@ build: build-stamp
 build-stamp: configure-stamp 
 	dh_testdir
 
-	# Add here commands to compile the package.
 	$(MAKE)
-	#docbook-to-man debian/libpam-csc.sgml > libpam-csc.1
 
 	touch $@
 
@@ -44,8 +42,7 @@ clean:
 	dh_testroot
 	rm -f build-stamp configure-stamp
 
-	# Add here commands to clean up after the build process.
-	-$(MAKE) clean
+	$(MAKE) clean
 
 	dh_clean 
 
@@ -55,9 +52,6 @@ install: build-stamp
 	dh_clean -k 
 	dh_installdirs
 	install -m 644 pam_csc.so $(CURDIR)/debian/libpam-csc/lib/security
-
-	# Add here commands to install the package into debian/libpam-csc.
-#	$(MAKE) DESTDIR=$(CURDIR)/debian/libpam-csc install
 
 
 # Build architecture-independent files here.
