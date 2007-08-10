@@ -36,6 +36,7 @@
 #define PAM_CSC_CSCF_SASL_REALM     "STUDENT.CS.UWATERLOO.CA"
 #define PAM_CSC_LDAP_TIMEOUT        5
 #define PAM_CSC_MINIMUM_UID         1000
+#define PAM_CSC_ALLOWED_USERNAMES   {"nobody"}
 #define PAM_CSC_EXPIRED_MSG \
     "*****************************************************************************\n" \
     "*                                                                           *\n" \
@@ -49,6 +50,8 @@
     "(pam_csc): %s was not registered for current term or previous term - denying login\n"
 #define PAM_CSC_SYSLOG_EXPIRED_ERROR \
     "(pam_csc): %s was not registered for current term but was registered for previous term - permitting login\n"
+#define PAM_CSC_SYSLOG_NOT_A_MEMBER \
+    "(pam_csc): %s is not a member account - permitting login\n"
 #define PAM_CSC_SYSLOG_CSCF_DISALLOWED \
     "(pam_csc): %s is using a CSCF machine but is not enrolled in CS - denying login\n"
 #define PAM_CSC_SYSLOG_SASL_UNRECOGNIZED_CALLBACK \
@@ -162,6 +165,8 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     int retval = PAM_SUCCESS;
     const char* username;
     struct passwd* pwd;
+    const char* allowed_usernames[] = PAM_CSC_ALLOWED_USERNAMES;
+    int i;
     time_t cur_time;
     struct tm* local_time;
     int long_term;
@@ -192,6 +197,15 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     if(pwd && pwd->pw_uid < PAM_CSC_MINIMUM_UID)
     {
         return PAM_SUCCESS;
+    }
+
+    /* check username */
+    for(i = 0; i < sizeof(allowed_usernames) / sizeof(char*); i++)
+    {
+        if(strcmp(allowed_usernames[i], username) == 0)
+        {
+            return PAM_SUCCESS;
+        }
     }
 
     /* escape username */
@@ -270,7 +284,14 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
 
     /* get CSC entry */
     WARN_ZERO( entry = ldap_first_entry(ld_csc, res_csc) )
-    WARN_ZERO( values = ldap_get_values(ld_csc, entry, "term") )
+    values = ldap_get_values(ld_csc, entry, "term");
+    if(!values)
+    {
+        syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_NOT_A_MEMBER, 
+            username);
+        retval = PAM_SUCCESS;
+        goto cleanup;
+    }
 
     /* iterate through term attributes */
     expired = true;
