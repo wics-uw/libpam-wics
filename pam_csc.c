@@ -30,9 +30,9 @@
 #define PAM_CSC_CSCF_BASE_DN        "dc=student,dc=cs,dc=uwateloo,dc=ca"
 #define PAM_CSC_CSCF_BIND_DN \
     "uid=TODO,dc=student,dc=cs,dc=uwaterloo,dc=ca"
-#define PAM_CSC_KRB5CCNAME          "/tmp/krb5cc_pam_csc"
 #define PAM_CSC_CSCF_SASL_USER \
-    "dn:uid=TODO,cn=STUDENT.CS.UWATERLOO.CA,cn=GSSAPI,cn=auth"
+    "dn:uid=TODO,cn=STUDENT.CS.UWATERLOO.CA,cn=DIGEST-MD5,cn=auth"
+#define PAM_CSC_CSCF_PASSWORD_FILE  "/etc/security/pam_csc_cscf_password"
 #define PAM_CSC_CSCF_SASL_REALM     "STUDENT.CS.UWATERLOO.CA"
 #define PAM_CSC_LDAP_TIMEOUT        5
 #define PAM_CSC_MINIMUM_UID         1000
@@ -86,6 +86,7 @@ struct pam_csc_sasl_interact_param
 {
     const char* realm;
     const char* user;
+    char pass[100];
 };
 typedef struct pam_csc_sasl_interact_param pam_csc_sasl_interact_param_t;
 
@@ -104,6 +105,9 @@ int pam_csc_sasl_interact(LDAP* ld, unsigned flags, void* def, void* inter)
             interact->result = param->user;
             interact->len = strlen(param->user);
             break;
+        case SASL_CB_PASS:
+            interact->result = param->pass;
+            interact->len = strlen(param->pass);
         default:
             syslog(LOG_AUTHPRIV | LOG_NOTICE,
                 PAM_CSC_SYSLOG_SASL_UNRECOGNIZED_CALLBACK, interact->id);
@@ -174,6 +178,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     char cur_term[6], prev_term[6];
     LDAP *ld_csc = NULL, *ld_cscf = NULL;
     bool cscf;
+    FILE* pass_file = NULL;
     char* username_escaped = NULL;
     char *filter_csc = NULL, *filter_cscf = NULL;
     char *attrs_csc[] = {"objectClass", "term", NULL}, 
@@ -235,17 +240,25 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
 
     if(cscf)
     {
-        /* set krb5 cache location */
-        setenv("KRB5CCNAME", PAM_CSC_KRB5CCNAME, 1);
-
-        /* connect to CSCF */
         pam_csc_sasl_interact_param_t interact_param = {
             PAM_CSC_CSCF_SASL_REALM,
-            PAM_CSC_CSCF_SASL_USER,
+            PAM_CSC_CSCF_SASL_USER
         };
+        int ret;
+
+        /* read password file */
+        WARN_ZERO( pass_file = fopen(PAM_CSC_CSCF_PASSWORD_FILE, "r") )
+        ret = fread(interact_param.pass, sizeof(char), 
+            sizeof(interact_param.pass) - 1, pass_file);
+        interact_param.pass[ret] = '\0';
+        if(ret && interact_param.pass[ret - 1] == '\n')
+            interact_param.pass[ret - 1] = '\0';
+        fclose(pass_file); pass_file = NULL;
+
+        /* connect to CSCF */
         WARN_LDAP( ldap_initialize(&ld_cscf, PAM_CSC_CSCF_URI) )
         WARN_NEG1( ldap_sasl_interactive_bind_s(ld_cscf, PAM_CSC_CSCF_BIND_DN,
-            "GSSAPI", NULL, NULL, LDAP_SASL_INTERACTIVE | LDAP_SASL_QUIET,
+            "DIGEST-MD5", NULL, NULL, LDAP_SASL_INTERACTIVE | LDAP_SASL_QUIET,
             pam_csc_sasl_interact, &interact_param) )
     }
 
