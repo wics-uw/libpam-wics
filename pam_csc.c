@@ -14,15 +14,6 @@
 #include <syslog.h>
 #include <pwd.h>
 
-/* TODO
- *
- * We need to create a cronjob (that runs on logon and every hour) to run
- * 'kinit -p TODO@STUDENT.CS.UWATERLOO.CA -k -c /tmp/krb5cc_pam_csc'
- *
- * We also need to add a keytab entry for TODO@STUDENT.CS.UWATERLOO.CA
- *
- */
-
 #define PAM_CSC_CSC_BASE_DN         "ou=People,dc=csclub,dc=uwaterloo,dc=ca"
 #define PAM_CSC_CSCF_URI \
     "ldaps://eponina.student.cs.uwaterloo.ca" \
@@ -234,7 +225,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     {
         /* TODO: check pam_rhost
          * It appears that the thin clients all have hostnames of the form
-         * tc[0-9]+\.cs
+         * tc[0-9]+\.student\.cs
          */
     }
 
