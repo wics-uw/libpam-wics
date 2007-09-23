@@ -137,13 +137,13 @@ char* pam_csc_escape_ldap_string(const char* src)
 int pam_csc_print_message(pam_handle_t* pamh, char* msg, int style)
 {
     int retval = PAM_SUCCESS;
-    struct pam_conv* conv;
+    const struct pam_conv* conv;
     struct pam_message message;
     struct pam_message* messages[1];
     struct pam_response* response;
 
     /* output message */
-    WARN_PAM( pam_get_item(pamh, PAM_CONV, (void**)&conv) )
+    WARN_PAM( pam_get_item(pamh, PAM_CONV, (const void**)&conv) )
     messages[0] = &message;
     message.msg_style = style;
     message.msg = msg;
@@ -221,7 +221,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
 
     /* check if we are logging in from a CSCF teaching thin client */
     cscf = false;
-    if(pam_get_item(pamh, PAM_RHOST, (void**)&pam_rhost) && pam_rhost)
+    if(pam_get_item(pamh, PAM_RHOST, (const void**)&pam_rhost) && pam_rhost)
     {
         /* TODO: check pam_rhost
          * It appears that the thin clients all have hostnames of the form
