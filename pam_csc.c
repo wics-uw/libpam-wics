@@ -144,6 +144,8 @@ int pam_csc_print_message(pam_handle_t* pamh, char* msg, int style)
 
     /* output message */
     WARN_PAM( pam_get_item(pamh, PAM_CONV, (const void**)&conv) )
+    if(!conv || !conv->conv)
+        goto cleanup;
     messages[0] = &message;
     message.msg_style = style;
     message.msg = msg;
