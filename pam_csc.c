@@ -225,10 +225,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     cscf = false;
     if(pam_get_item(pamh, PAM_RHOST, (const void**)&pam_rhost) && pam_rhost)
     {
-        /* TODO: check pam_rhost
-         * It appears that the thin clients all have hostnames of the form
-         * tc[0-9]+\.student\.cs
-         */
+        /* TODO: check if pam_rhost is tcNNN.student.cs */
     }
 
     if(cscf)
