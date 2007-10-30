@@ -1,3 +1,9 @@
+libpam-csc (1.5) stable testing; urgency=low
+
+  * Check for correct uid range
+
+ -- David Bartley <dtbartle@csclub.uwaterloo.ca>  Mon, 29 Oct 2007 23:17:31 -0400
+
 libpam-csc (1.4) stable testing; urgency=low
 
   * Check that conv and conv->conv are non-null (fixes cron segfault)

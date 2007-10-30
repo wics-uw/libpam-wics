@@ -26,7 +26,6 @@
 #define PAM_CSC_CSCF_PASSWORD_FILE  "/etc/security/pam_csc_cscf_password"
 #define PAM_CSC_CSCF_SASL_REALM     "STUDENT.CS.UWATERLOO.CA"
 #define PAM_CSC_LDAP_TIMEOUT        5
-#define PAM_CSC_MINIMUM_UID         1000
 #define PAM_CSC_ALLOWED_USERNAMES   {"nobody"}
 #define PAM_CSC_EXPIRED_MSG \
     "*****************************************************************************\n" \
@@ -190,11 +189,15 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
         return PAM_USER_UNKNOWN;
     }
 
-    /* check uid */
+    /* check uid range */
     pwd = getpwnam(username);
-    if(pwd && pwd->pw_uid < PAM_CSC_MINIMUM_UID)
+    if(pwd)
     {
-        return PAM_SUCCESS;
+        /* these ranges are taken from puppet/documents/id-range */
+        if(pwd->pw_uid < 500 || (pwd->pw_uid >= 1000 && pwd->pw_uid < 10000))
+        {
+            return PAM_SUCCESS;
+        }
     }
 
     /* check username */
