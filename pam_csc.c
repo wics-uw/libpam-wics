@@ -90,20 +90,20 @@ int pam_csc_sasl_interact(LDAP* ld, unsigned flags, void* def, void* inter)
         {
         case SASL_CB_GETREALM:
             interact->result = param->realm;
-            interact->len = strlen(param->realm);
+            break;
         case SASL_CB_USER:
             interact->result = param->user;
-            interact->len = strlen(param->user);
             break;
         case SASL_CB_PASS:
             interact->result = param->pass;
-            interact->len = strlen(param->pass);
+            break;
         default:
             syslog(LOG_AUTHPRIV | LOG_NOTICE,
                 PAM_CSC_SYSLOG_SASL_UNRECOGNIZED_CALLBACK, interact->id);
             interact->result = "";
-            interact->len = 0;
+            break;
         }
+        interact->len = strlen(param->result);
     }
 
     return LDAP_SUCCESS;
