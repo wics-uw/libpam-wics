@@ -291,7 +291,9 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     /* get CSC entry */
     WARN_ZERO( entry = ldap_first_entry(ld_csc, res_csc) )
     values = ldap_get_values(ld_csc, entry, "term");
-    if(!values)
+    nmvalues = ldap_get_values(ld_csc, entry, "nonMemberTerm");
+
+    if(!values && !nmvalues)
     {
         syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_NOT_A_MEMBER, 
             username);
@@ -299,20 +301,20 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
         goto cleanup;
     }
 
-    nmvalues = ldap_get_values(ld_csc, entry, "nonMemberTerm");
-
     /* iterate through term attributes */
     expired = true;
-    values_iter = values;
-    while(*values_iter)
-    {
-        if(strcmp(*values_iter, cur_term) == 0)
+    if (values) {
+        values_iter = values;
+        while(*values_iter)
         {
-            /* user is registered in current term */
-            expired = false;
-            break;
+            if(strcmp(*values_iter, cur_term) == 0)
+            {
+                /* user is registered in current term */
+                expired = false;
+                break;
+            }
+            values_iter++;
         }
-        values_iter++;
     }
     if (nmvalues) {
         values_iter = nmvalues;
