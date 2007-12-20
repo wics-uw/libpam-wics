@@ -256,7 +256,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     }
 
     /* create CSC request string */
-    WARN_ZERO( filter_csc = malloc(1000 + strlen(username_escaped)) )
+    WARN_ZERO( filter_csc = malloc(140 + strlen(username_escaped)) )
     sprintf(filter_csc, "(&(uid=%s)(|(&(objectClass=member)(|(term=%s)(term=%s)(nonMemberTerm=%s)(nonMemberTerm=%s)))(!(objectClass=member))))", username_escaped, cur_term, prev_term, cur_term, prev_term);
 
     /* issue CSC request */
