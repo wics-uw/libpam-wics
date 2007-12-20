@@ -103,7 +103,7 @@ int pam_csc_sasl_interact(LDAP* ld, unsigned flags, void* def, void* inter)
             interact->result = "";
             break;
         }
-        interact->len = strlen(param->result);
+        interact->len = strlen(interact->result);
     }
 
     return LDAP_SUCCESS;
