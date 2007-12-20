@@ -173,7 +173,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     FILE* pass_file = NULL;
     char* username_escaped = NULL;
     char *filter_csc = NULL, *filter_cscf = NULL;
-    char *attrs_csc[] = {"objectClass", "term", NULL}, 
+    char *attrs_csc[] = {"objectClass", "term", "nonMemberTerm", NULL},
         *attrs_cscf[] = {"objectClass", NULL};
     bool expired;
     const char* pam_rhost;
@@ -181,7 +181,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     LDAPMessage *res_csc = NULL, *res_cscf = NULL;
     struct timeval timeout = {PAM_CSC_LDAP_TIMEOUT, 0};
     LDAPMessage* entry = NULL;
-    char **values = NULL, **values_iter = NULL;
+    char **values = NULL, **nmvalues = NULL, **values_iter = NULL;
 
     /* determine username */
     if((pam_get_user(pamh, &username, NULL) != PAM_SUCCESS) || !username)
@@ -256,8 +256,8 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     }
 
     /* create CSC request string */
-    WARN_ZERO( filter_csc = malloc(100 + strlen(username_escaped)) )
-    sprintf(filter_csc, "(&(uid=%s)(|(&(objectClass=member)(|(term=%s)(term=%s)))(!(objectClass=member))))", username_escaped, cur_term, prev_term);
+    WARN_ZERO( filter_csc = malloc(1000 + strlen(username_escaped)) )
+    sprintf(filter_csc, "(&(uid=%s)(|(&(objectClass=member)(|(term=%s)(term=%s)(nonMemberTerm=%s)(nonMemberTerm=%s)))(!(objectClass=member))))", username_escaped, cur_term, prev_term, cur_term, prev_term);
 
     /* issue CSC request */
     WARN_NEG1( msg_csc = ldap_search(ld_csc, PAM_CSC_CSC_BASE_DN, 
@@ -299,6 +299,8 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
         goto cleanup;
     }
 
+    nmvalues = ldap_get_values(ld_csc, entry, "nonMemberTerm");
+
     /* iterate through term attributes */
     expired = true;
     values_iter = values;
@@ -311,6 +313,16 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
             break;
         }
         values_iter++;
+    }
+    if (nmvalues) {
+        values_iter = nmvalues;
+        while (*values_iter) {
+            if (strcmp(*values_iter, cur_term) == 0) {
+                expired = false;
+                break;
+            }
+            values_iter++;
+        }
     }
 
     /* check if account is expired */
@@ -343,6 +355,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
 cleanup:
 
     if(values) ldap_value_free(values);
+    if(nmvalues) ldap_value_free(nmvalues);
     if(res_csc) ldap_msgfree(res_csc);
     if(res_cscf) ldap_msgfree(res_cscf);
     if(ld_csc) ldap_unbind(ld_csc);

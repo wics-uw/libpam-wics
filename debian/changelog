@@ -1,3 +1,9 @@
+libpam-csc (1.6) stable testing; urgency=low
+
+  * Allow login if nonMemberTerm has a valid term.
+
+ -- Michael Spang <mspang@uwaterloo.ca>  Thu, 20 Dec 2007 17:38:32 -0500
+
 libpam-csc (1.5) stable testing; urgency=low
 
   * Check for correct uid range
