@@ -165,7 +165,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     int i;
     time_t cur_time;
     struct tm* local_time;
-    int long_term;
+    int long_term, term_month;
     static const char term_chars[] = {'w', 's', 'f'};
     char cur_term[6], prev_term[6];
     LDAP *ld_csc = NULL, *ld_cscf = NULL;
@@ -219,6 +219,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     sprintf(cur_term, "%c%d", term_chars[long_term % 3], long_term / 3);
     long_term--;
     sprintf(prev_term, "%c%d", term_chars[long_term % 3], long_term / 3);
+    term_month = local_time->tm_mon % 4;
 
     /* connect to CSC */
     WARN_LDAP( ldap_create(&ld_csc) )
@@ -330,10 +331,23 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     /* check if account is expired */
     if(expired)
     {
-        /* show notice and continue */
-        pam_csc_print_message(pamh, PAM_CSC_EXPIRED_MSG, PAM_TEXT_INFO);
-        syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_EXPIRED_ERROR, 
-            username);
+        /* we allow once month grace-period */
+        if(term_month == 0)
+        {
+            /* show notice and continue */
+            pam_csc_print_message(pamh, PAM_CSC_EXPIRED_MSG, PAM_TEXT_INFO);
+            syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_EXPIRED_ERROR, 
+                username);
+        }
+        else
+        {
+            /* show notice and disallow login */
+            pam_csc_print_message(pamh, PAM_CSC_EXPIRED_MSG, PAM_ERROR_MSG);
+            syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_EXPIRED_WARNING, 
+                username);
+            retval = PAM_AUTH_ERR;
+            goto cleanup;
+        }
     }
 
     if(cscf)
