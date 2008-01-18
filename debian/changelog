@@ -1,3 +1,10 @@
+libpam-csc (1.7) stable testing; urgency=low
+
+  * Allocate less memory
+  * Only allow 1 month grace period
+
+ -- David Bartley <dtbartle@csclub.uwaterloo.ca>  Thu, 17 Jan 2008 21:21:46 -0500
+
 libpam-csc (1.6) stable testing; urgency=low
 
   * Allow login if nonMemberTerm has a valid term.
