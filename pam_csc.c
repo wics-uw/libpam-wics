@@ -7,12 +7,24 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <security/pam_modules.h>
 #include <security/pam_appl.h>
+#include <security/pam_modules.h>
 #include <ldap.h>
 #include <sasl/sasl.h>
 #include <syslog.h>
 #include <pwd.h>
+
+#ifndef LDAP_SASL_QUIET
+#  define LDAP_SASL_QUIET 0
+#endif
+
+#ifndef LOG_AUTHPRIV
+#  define LOG_AUTHPRIV LOG_AUTH
+#endif
+
+#ifndef PAM_EXTERN
+#  define PAM_EXTERN extern
+#endif
 
 #define PAM_CSC_CSC_BASE_DN         "ou=People,dc=csclub,dc=uwaterloo,dc=ca"
 #define PAM_CSC_CSCF_URI \
