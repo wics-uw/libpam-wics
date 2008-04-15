@@ -1,3 +1,9 @@
+libpam-csc (1.8) stable testing; urgency=low
+
+  * Build fixes
+
+ -- David Bartley <dtbartle@csclub.uwaterloo.ca>  Tue, 15 Apr 2008 09:00:57 -0400
+
 libpam-csc (1.7) stable testing; urgency=low
 
   * Allocate less memory
