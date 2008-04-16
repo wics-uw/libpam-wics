@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-std=c99 -g -O2 -fPIC -Wall
+CFLAGS=-std=c99 -g -O2 -fPIC -Wall -DLDAP_DEPRECATED
 LDFLAGS=-g -shared -lpam -lldap
 
 all: pam_csc.so
