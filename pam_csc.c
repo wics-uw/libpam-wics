@@ -48,9 +48,9 @@
 #define PAM_CSC_CSCF_DISALLOWED_MSG \
     "You are not registered as a CS student - login denied."
 
-#define PAM_CSC_SYSLOG_EXPIRED_WARNING \
+#define PAM_CSC_SYSLOG_EXPIRED_NO_TERMS \
     "(pam_csc): %s was not registered for current term or previous term - denying login\n"
-#define PAM_CSC_SYSLOG_EXPIRED_ERROR \
+#define PAM_CSC_SYSLOG_EXPIRED_LAST_TERM \
     "(pam_csc): %s was not registered for current term but was registered for previous term - permitting login\n"
 #define PAM_CSC_SYSLOG_NOT_A_MEMBER \
     "(pam_csc): %s is not a member account - permitting login\n"
@@ -160,7 +160,7 @@ int pam_csc_print_message(pam_handle_t* pamh, char* msg, int style)
     messages[0] = &message;
     message.msg_style = style;
     message.msg = msg;
-    WARN_PAM( conv->conv(1, (const struct pam_message**)messages, 
+    WARN_PAM( conv->conv(1, (const struct pam_message**)messages,
         &response, conv->appdata_ptr) )
 
 cleanup:
@@ -254,7 +254,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
 
         /* read password file */
         WARN_ZERO( pass_file = fopen(PAM_CSC_CSCF_PASSWORD_FILE, "r") )
-        ret = fread(interact_param.pass, sizeof(char), 
+        ret = fread(interact_param.pass, sizeof(char),
             sizeof(interact_param.pass) - 1, pass_file);
         interact_param.pass[ret] = '\0';
         if(ret && interact_param.pass[ret - 1] == '\n')
@@ -273,7 +273,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     sprintf(filter_csc, "(&(uid=%s)(|(&(objectClass=member)(|(term=%s)(term=%s)(nonMemberTerm=%s)(nonMemberTerm=%s)))(!(objectClass=member))))", username_escaped, cur_term, prev_term, cur_term, prev_term);
 
     /* issue CSC request */
-    WARN_NEG1( msg_csc = ldap_search(ld_csc, PAM_CSC_CSC_BASE_DN, 
+    WARN_NEG1( msg_csc = ldap_search(ld_csc, PAM_CSC_CSC_BASE_DN,
         LDAP_SCOPE_SUBTREE, filter_csc, attrs_csc, 0) )
 
     if(cscf)
@@ -283,7 +283,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
         sprintf(filter_csc, "TODO %s", username_escaped);
 
         /* issue CSCF request */
-        WARN_NEG1( msg_cscf = ldap_search(ld_cscf, PAM_CSC_CSCF_BASE_DN, 
+        WARN_NEG1( msg_cscf = ldap_search(ld_cscf, PAM_CSC_CSCF_BASE_DN,
             LDAP_SCOPE_SUBTREE, filter_cscf, attrs_cscf, 1) )
     }
 
@@ -295,7 +295,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     {
         /* show notice and disallow login */
         pam_csc_print_message(pamh, PAM_CSC_EXPIRED_MSG, PAM_ERROR_MSG);
-        syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_EXPIRED_WARNING, 
+        syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_EXPIRED_NO_TERMS,
             username);
         retval = PAM_AUTH_ERR;
         goto cleanup;
@@ -308,7 +308,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
 
     if(!values && !nmvalues)
     {
-        syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_NOT_A_MEMBER, 
+        syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_NOT_A_MEMBER,
             username);
         retval = PAM_SUCCESS;
         goto cleanup;
@@ -348,14 +348,14 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
         {
             /* show notice and continue */
             pam_csc_print_message(pamh, PAM_CSC_EXPIRED_MSG, PAM_TEXT_INFO);
-            syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_EXPIRED_ERROR, 
+            syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_EXPIRED_LAST_TERM,
                 username);
         }
         else
         {
             /* show notice and disallow login */
             pam_csc_print_message(pamh, PAM_CSC_EXPIRED_MSG, PAM_ERROR_MSG);
-            syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_EXPIRED_WARNING, 
+            syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_EXPIRED_NO_TERMS,
                 username);
             retval = PAM_AUTH_ERR;
             goto cleanup;
@@ -371,9 +371,9 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
         if(ldap_count_entries(ld_cscf, res_cscf) == 0)
         {
             /* output CSCF disallowed message */
-            pam_csc_print_message(pamh, PAM_CSC_CSCF_DISALLOWED_MSG, 
+            pam_csc_print_message(pamh, PAM_CSC_CSCF_DISALLOWED_MSG,
                 PAM_ERROR_MSG);
-            syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_CSCF_DISALLOWED, 
+            syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_CSCF_DISALLOWED,
                 username);
             retval = PAM_AUTH_ERR;
             goto cleanup;
