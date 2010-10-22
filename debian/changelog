@@ -1,3 +1,9 @@
+libpam-csc (1.9ubuntu1) maverick; urgency=low
+
+  * Build for maverick.
+
+ -- Michael Spang <mspang@csclub.uwaterloo.ca>  Fri, 22 Oct 2010 10:08:19 -0400
+
 libpam-csc (1.9) stable; urgency=low
 
   * Update package for squeeze.
