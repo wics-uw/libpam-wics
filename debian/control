@@ -4,7 +4,8 @@ Priority: optional
 Maintainer: Systems Commmittee <syscom@csclub.uwaterloo.ca>
 Uploaders:
  David Bartley <dtbartle@csclub.uwaterloo.ca>,
- Michael Spang <mspang@csclub.uwaterloo.ca>
+ Michael Spang <mspang@csclub.uwaterloo.ca>,
+ Jeremy Roman <jbroman@csclub.uwaterloo.ca>
 Build-Depends: debhelper (>= 7), libldap2-dev, libpam0g-dev, libsasl2-dev
 Standards-Version: 3.9.1
 
