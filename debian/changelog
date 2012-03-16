@@ -1,3 +1,9 @@
+libpam-csc (1.9ubuntu3) precise; urgency=low
+
+  * Build for precise.
+
+ -- Jeremy Roman <jbroman@csclub.uwaterloo.ca>  Fri, 16 Mar 2012 18:04:21 -0400
+
 libpam-csc (1.9ubuntu2) oneiric; urgency=low
 
   * Build for oneiric.

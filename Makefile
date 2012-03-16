@@ -1,11 +1,11 @@
 CC=gcc
 CFLAGS=-std=c99 -g -O2 -fPIC -Wall -DLDAP_DEPRECATED
-LDFLAGS=-g -shared -lpam -lldap
+LDFLAGS=-g -shared
 
 all: pam_csc.so
 
 pam_csc.so: pam_csc.o
-	$(CC) -o $@ $(LDFLAGS) $<
+	$(CC) -o $@ $(LDFLAGS) $< -lpam -lldap
 
 clean:
 	rm -f pam_csc.so pam_csc.o
