@@ -1,4 +1,5 @@
 #define PAM_SM_ACCOUNT
+#define LDAP_DEPRECATED 1
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -13,6 +14,7 @@
 #include <sasl/sasl.h>
 #include <syslog.h>
 #include <pwd.h>
+#include <grp.h>
 
 #ifndef LDAP_SASL_QUIET
 #  define LDAP_SASL_QUIET 0
@@ -27,16 +29,6 @@
 #endif
 
 #define PAM_CSC_CSC_BASE_DN         "ou=People,dc=csclub,dc=uwaterloo,dc=ca"
-#define PAM_CSC_CSCF_URI \
-    "ldaps://eponina.student.cs.uwaterloo.ca" \
-    "ldaps://canadenis.student.cs.uwaterloo.ca"
-#define PAM_CSC_CSCF_BASE_DN        "dc=student,dc=cs,dc=uwateloo,dc=ca"
-#define PAM_CSC_CSCF_BIND_DN \
-    "uid=TODO,dc=student,dc=cs,dc=uwaterloo,dc=ca"
-#define PAM_CSC_CSCF_SASL_USER \
-    "dn:uid=TODO,cn=STUDENT.CS.UWATERLOO.CA,cn=DIGEST-MD5,cn=auth"
-#define PAM_CSC_CSCF_PASSWORD_FILE  "/etc/security/pam_csc_cscf_password"
-#define PAM_CSC_CSCF_SASL_REALM     "STUDENT.CS.UWATERLOO.CA"
 #define PAM_CSC_LDAP_TIMEOUT        5
 #define PAM_CSC_ALLOWED_USERNAMES   {"nobody"}
 #define PAM_CSC_EXPIRED_MSG \
@@ -45,8 +37,6 @@
     "*    Your account has expired - please contact the Computer Science Club    *\n" \
     "*                                                                           *\n" \
     "*****************************************************************************\n"
-#define PAM_CSC_CSCF_DISALLOWED_MSG \
-    "You are not registered as a CS student - login denied."
 
 #define PAM_CSC_SYSLOG_EXPIRED_NO_TERMS \
     "(pam_csc): %s was not registered for current term or previous term - denying login\n"
@@ -54,8 +44,6 @@
     "(pam_csc): %s was not registered for current term but was registered for previous term - permitting login\n"
 #define PAM_CSC_SYSLOG_NOT_A_MEMBER \
     "(pam_csc): %s is not a member account - permitting login\n"
-#define PAM_CSC_SYSLOG_CSCF_DISALLOWED \
-    "(pam_csc): %s is using a CSCF machine but is not enrolled in CS - denying login\n"
 #define PAM_CSC_SYSLOG_SASL_UNRECOGNIZED_CALLBACK \
     "(pam_csc): %ld is not a recognized SASL callback option\n"
 
@@ -173,24 +161,22 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     int retval = PAM_SUCCESS;
     const char* username;
     struct passwd* pwd;
+    struct group *grp;
     const char* allowed_usernames[] = PAM_CSC_ALLOWED_USERNAMES;
-    int i;
+    unsigned int i;
     time_t cur_time;
     struct tm* local_time;
     int long_term, term_month;
     static const char term_chars[] = {'w', 's', 'f'};
     char cur_term[6], prev_term[6];
-    LDAP *ld_csc = NULL, *ld_cscf = NULL;
-    bool cscf;
-    FILE* pass_file = NULL;
+    LDAP *ld_csc = NULL;
     char* username_escaped = NULL;
-    char *filter_csc = NULL, *filter_cscf = NULL;
-    char *attrs_csc[] = {"objectClass", "term", "nonMemberTerm", NULL},
-        *attrs_cscf[] = {"objectClass", NULL};
-    bool expired;
+    char *filter_csc = NULL;
+    char *attrs_csc[] = {"objectClass", "term", "nonMemberTerm", NULL};
+    bool expired, syscom = 0; 
     const char* pam_rhost;
-    int msg_csc, msg_cscf;
-    LDAPMessage *res_csc = NULL, *res_cscf = NULL;
+    int msg_csc;
+    LDAPMessage *res_csc = NULL;
     struct timeval timeout = {PAM_CSC_LDAP_TIMEOUT, 0};
     LDAPMessage* entry = NULL;
     char **values = NULL, **nmvalues = NULL, **values_iter = NULL;
@@ -210,6 +196,17 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
         {
             return PAM_SUCCESS;
         }
+    }
+
+    /* check to see if user is in group syscom, if yes, still print message but allow login even if user expired */
+    i = 0;
+    grp = getgrnam("syscom");
+    while(grp->gr_mem[i] != NULL) {
+        if(!strcmp(grp->gr_mem[i], username)) {
+            syscom = 1;
+            break;
+        }
+        i++;
     }
 
     /* check username */
@@ -238,34 +235,9 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     WARN_NEG1( ldap_simple_bind(ld_csc, NULL, NULL) )
 
     /* check if we are logging in from a CSCF teaching thin client */
-    cscf = false;
     if(pam_get_item(pamh, PAM_RHOST, (const void**)&pam_rhost) && pam_rhost)
     {
         /* TODO: check if pam_rhost is tcNNN.student.cs */
-    }
-
-    if(cscf)
-    {
-        pam_csc_sasl_interact_param_t interact_param = {
-            PAM_CSC_CSCF_SASL_REALM,
-            PAM_CSC_CSCF_SASL_USER
-        };
-        int ret;
-
-        /* read password file */
-        WARN_ZERO( pass_file = fopen(PAM_CSC_CSCF_PASSWORD_FILE, "r") )
-        ret = fread(interact_param.pass, sizeof(char),
-            sizeof(interact_param.pass) - 1, pass_file);
-        interact_param.pass[ret] = '\0';
-        if(ret && interact_param.pass[ret - 1] == '\n')
-            interact_param.pass[ret - 1] = '\0';
-        fclose(pass_file); pass_file = NULL;
-
-        /* connect to CSCF */
-        WARN_LDAP( ldap_initialize(&ld_cscf, PAM_CSC_CSCF_URI) )
-        WARN_NEG1( ldap_sasl_interactive_bind_s(ld_cscf, PAM_CSC_CSCF_BIND_DN,
-            "DIGEST-MD5", NULL, NULL, LDAP_SASL_INTERACTIVE | LDAP_SASL_QUIET,
-            pam_csc_sasl_interact, &interact_param) )
     }
 
     /* create CSC request string */
@@ -275,17 +247,6 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     /* issue CSC request */
     WARN_NEG1( msg_csc = ldap_search(ld_csc, PAM_CSC_CSC_BASE_DN,
         LDAP_SCOPE_SUBTREE, filter_csc, attrs_csc, 0) )
-
-    if(cscf)
-    {
-        /* create CSCF request string */
-        WARN_ZERO( filter_cscf = malloc(100 + strlen(username_escaped)) )
-        sprintf(filter_csc, "TODO %s", username_escaped);
-
-        /* issue CSCF request */
-        WARN_NEG1( msg_cscf = ldap_search(ld_cscf, PAM_CSC_CSCF_BASE_DN,
-            LDAP_SCOPE_SUBTREE, filter_cscf, attrs_cscf, 1) )
-    }
 
     /* wait for CSC response */
     WARN_NEG1( ldap_result(ld_csc, msg_csc, 1, &timeout, &res_csc) )
@@ -297,7 +258,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
         pam_csc_print_message(pamh, PAM_CSC_EXPIRED_MSG, PAM_ERROR_MSG);
         syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_EXPIRED_NO_TERMS,
             username);
-        retval = PAM_AUTH_ERR;
+        retval = (syscom ? PAM_SUCCESS : PAM_AUTH_ERR);
         goto cleanup;
     }
 
@@ -357,40 +318,17 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
             pam_csc_print_message(pamh, PAM_CSC_EXPIRED_MSG, PAM_ERROR_MSG);
             syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_EXPIRED_NO_TERMS,
                 username);
-            retval = PAM_AUTH_ERR;
-            goto cleanup;
-        }
-    }
-
-    if(cscf)
-    {
-        /* wait for CSCF response */
-        WARN_NEG1( ldap_result(ld_cscf, msg_cscf, 1, &timeout, &res_cscf) )
-
-        /* check if we got an entry back from CSCF */
-        if(ldap_count_entries(ld_cscf, res_cscf) == 0)
-        {
-            /* output CSCF disallowed message */
-            pam_csc_print_message(pamh, PAM_CSC_CSCF_DISALLOWED_MSG,
-                PAM_ERROR_MSG);
-            syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_CSC_SYSLOG_CSCF_DISALLOWED,
-                username);
-            retval = PAM_AUTH_ERR;
-            goto cleanup;
+            retval = (syscom ? PAM_SUCCESS : PAM_AUTH_ERR);
         }
     }
 
 cleanup:
-
     if(values) ldap_value_free(values);
     if(nmvalues) ldap_value_free(nmvalues);
     if(res_csc) ldap_msgfree(res_csc);
-    if(res_cscf) ldap_msgfree(res_cscf);
     if(ld_csc) ldap_unbind(ld_csc);
-    if(ld_cscf) ldap_unbind(ld_cscf);
     if(filter_csc) free(filter_csc);
-    if(filter_cscf) free(filter_cscf);
     if(username_escaped) free(username_escaped);
-
     return retval;
 }
+
