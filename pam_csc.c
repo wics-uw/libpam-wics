@@ -199,14 +199,12 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     }
 
     /* check to see if user is in group syscom, if yes, still print message but allow login even if user expired */
-    i = 0;
     grp = getgrnam("syscom");
-    while(grp->gr_mem[i] != NULL) {
+    for(i = 0; grp && grp->gr_mem[i]; i++) {
         if(!strcmp(grp->gr_mem[i], username)) {
             syscom = 1;
             break;
         }
-        i++;
     }
 
     /* check username */
