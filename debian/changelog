@@ -1,3 +1,9 @@
+libpam-csc (1.10ubuntu5) saucy; urgency=low
+
+  * Packaging for saucy.
+
+ -- Sean Hunt <scshunt@csclub.uwaterloo.ca>  Thu, 05 Dec 2013 15:54:05 -0500
+
 libpam-csc (1.10jessie0) jessie; urgency=low
 
   * Packaging for jessie.
