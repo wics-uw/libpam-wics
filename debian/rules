@@ -36,7 +36,7 @@ install: build-stamp
 	dh_testroot
 	dh_prep
 	dh_installdirs
-	install -m 644 pam_csc.so $(CURDIR)/debian/libpam-csc/lib/security
+	install -m 644 pam_wics.so $(CURDIR)/debian/libpam-wics/lib/security
 
 
 # Build architecture-independent files here.
