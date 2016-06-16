@@ -1,3 +1,9 @@
 /*-stamp
 *.o
 *.so
+
+# Debian build artifacts
+debian/files
+debian/libpam-wics.debhelper.log
+debian/libpam-wics.substvars
+debian/libpam-wics/
