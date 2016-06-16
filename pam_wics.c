@@ -172,7 +172,6 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     char *filter_wics = NULL;
     char *attrs_wics[] = {"objectClass", "term", NULL};
     bool expired, syscom = 0; 
-    const char* pam_rhost;
     int msg_wics;
     LDAPMessage *res_wics = NULL;
     struct timeval timeout = {PAM_WICS_LDAP_TIMEOUT, 0};
