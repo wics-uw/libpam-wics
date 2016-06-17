@@ -170,14 +170,13 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     LDAP *ld_wics = NULL;
     char* username_escaped = NULL;
     char *filter_wics = NULL;
-    char *attrs_wics[] = {"objectClass", "term", "nonMemberTerm", NULL};
+    char *attrs_wics[] = {"objectClass", "term", NULL};
     bool expired, syscom = 0; 
-    const char* pam_rhost;
     int msg_wics;
     LDAPMessage *res_wics = NULL;
     struct timeval timeout = {PAM_WICS_LDAP_TIMEOUT, 0};
     LDAPMessage* entry = NULL;
-    char **values = NULL, **nmvalues = NULL, **values_iter = NULL;
+    char **values = NULL, **values_iter = NULL;
 
     /* determine username */
     if((pam_get_user(pamh, &username, NULL) != PAM_SUCCESS) || !username)
@@ -232,7 +231,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
 
     /* create WICS request string */
     WARN_ZERO( filter_wics = malloc(140 + strlen(username_escaped)) )
-    sprintf(filter_wics, "(&(uid=%s)(|(&(objectClass=member)(|(term=%s)(term=%s)(nonMemberTerm=%s)(nonMemberTerm=%s)))(!(objectClass=member))))", username_escaped, cur_term, prev_term, cur_term, prev_term);
+    sprintf(filter_wics, "(&(uid=%s)(|(&(objectClass=member)(|(term=%s)(term=%s)))(!(objectClass=member))))", username_escaped, cur_term, prev_term);
 
     /* issue WICS request */
     WARN_NEG1( msg_wics = ldap_search(ld_wics, PAM_WICS_WICS_BASE_DN,
@@ -255,9 +254,8 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
     /* get WICS entry */
     WARN_ZERO( entry = ldap_first_entry(ld_wics, res_wics) )
     values = ldap_get_values(ld_wics, entry, "term");
-    nmvalues = ldap_get_values(ld_wics, entry, "nonMemberTerm");
 
-    if(!values && !nmvalues)
+    if(!values)
     {
         syslog(LOG_AUTHPRIV | LOG_NOTICE, PAM_WICS_SYSLOG_NOT_A_MEMBER,
             username);
@@ -274,16 +272,6 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
             if(strcmp(*values_iter, cur_term) == 0)
             {
                 /* user is registered in current term */
-                expired = false;
-                break;
-            }
-            values_iter++;
-        }
-    }
-    if (nmvalues) {
-        values_iter = nmvalues;
-        while (*values_iter) {
-            if (strcmp(*values_iter, cur_term) == 0) {
                 expired = false;
                 break;
             }
@@ -314,7 +302,6 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t* pamh, int flags, int argc, const c
 
 cleanup:
     if(values) ldap_value_free(values);
-    if(nmvalues) ldap_value_free(nmvalues);
     if(res_wics) ldap_msgfree(res_wics);
     if(ld_wics) ldap_unbind(ld_wics);
     if(filter_wics) free(filter_wics);
